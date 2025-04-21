@@ -15,7 +15,7 @@ jobs:
       - name: Aprovação manual
         uses: trstringer/manual-approval@v1
         with:
-          secret: ${{ secrets.GITHUB_TOKEN }}
+          secret: ${{ secrets.PAT_TOKEN }}
           approvers: lrdspc
           minimum-approvals: 1
 
