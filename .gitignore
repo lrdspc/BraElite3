@@ -50,3 +50,4 @@ drizzle/migrations/.snapshot.json
 
 # PWA
 dev-dist
+.qodo
