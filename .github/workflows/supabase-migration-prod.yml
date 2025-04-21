@@ -13,10 +13,8 @@ jobs:
     steps:
       - name: Checkout código
         uses: actions/checkout@v4
-
       - name: Instalar Supabase CLI
         run: npm install -g supabase
-
       - name: Rodar migração no Supabase (produção)
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_PROD_URL }}
@@ -24,6 +22,5 @@ jobs:
           SUPABASE_SERVICE_ROLE: ${{ secrets.SUPABASE_PROD_SERVICE_ROLE }}
         run: |
           supabase db push --project-ref $SUPABASE_URL
-
       - name: Aviso de sucesso
         run: echo "Migração do banco de dados Supabase (produção) realizada com sucesso."
