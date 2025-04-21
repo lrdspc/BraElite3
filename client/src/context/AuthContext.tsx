@@ -57,15 +57,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const res = await fetch(queryKey[0] as string, {
           credentials: 'include',
         });
-        
+
         if (res.status === 401) {
           return null;
         }
-        
+
         if (!res.ok) {
           throw new Error('Network response was not ok');
         }
-        
+
         return res.json();
       } catch (error) {
         console.error('Error fetching session:', error);
@@ -78,7 +78,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     if (!isLoading) {
       setUser(data);
-      
+
       // Não vamos redirecionar aqui para evitar conflitos com os layouts
       // Deixamos a lógica de redirecionamento para os componentes de layout
     }
@@ -122,7 +122,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const demoUser = demoUsers.find(
         user => user.username === username && user.password === password
       );
-      
+
       if (demoUser) {
         // Simula uma pequena pausa para dar a impressão de que está processando
         await new Promise(resolve => setTimeout(resolve, 800));
@@ -130,7 +130,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const { password: _, ...safeUser } = demoUser;
         return safeUser;
       }
-      
+
       // Se não for um usuário de demonstração, tenta o login normal
       try {
         const res = await apiRequest('POST', '/api/auth/login', { username, password });
@@ -142,14 +142,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     },
     onSuccess: (userData) => {
       setUser(userData);
-      
+
       // Salva o usuário na sessão local para persistência
       try {
         localStorage.setItem('brasilit_user', JSON.stringify(userData));
       } catch (error) {
         console.warn('Não foi possível salvar sessão localmente:', error);
       }
-      
+
       navigate('/');
       toast({
         title: 'Login realizado com sucesso',
@@ -187,7 +187,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } catch (error) {
         console.warn('Erro ao remover sessão local:', error);
       }
-      
+
       // Tenta logout normal na API
       try {
         const res = await apiRequest('POST', '/api/auth/logout', {});

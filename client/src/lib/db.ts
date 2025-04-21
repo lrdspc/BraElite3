@@ -53,13 +53,13 @@ export async function initDB(): Promise<IDBPDatabase<BrasilitDB>> {
           const clientStore = db.createObjectStore('clients', { keyPath: 'id' });
           clientStore.createIndex('by-name', 'name');
         }
-        
+
         // Projects store
         if (!db.objectStoreNames.contains('projects')) {
           const projectStore = db.createObjectStore('projects', { keyPath: 'id' });
           projectStore.createIndex('by-client', 'clientId');
         }
-        
+
         // Inspections store
         if (!db.objectStoreNames.contains('inspections')) {
           const inspectionStore = db.createObjectStore('inspections', { keyPath: 'id' });
@@ -69,13 +69,13 @@ export async function initDB(): Promise<IDBPDatabase<BrasilitDB>> {
           inspectionStore.createIndex('by-status', 'status');
           inspectionStore.createIndex('by-date', 'scheduledDate');
         }
-        
+
         // Evidences store
         if (!db.objectStoreNames.contains('evidences')) {
           const evidenceStore = db.createObjectStore('evidences', { keyPath: 'id' });
           evidenceStore.createIndex('by-inspection', 'inspectionId');
         }
-        
+
         // Sync queue store
         if (!db.objectStoreNames.contains('syncQueue')) {
           db.createObjectStore('syncQueue', { keyPath: 'id' });
@@ -83,7 +83,7 @@ export async function initDB(): Promise<IDBPDatabase<BrasilitDB>> {
       }
     });
   }
-  
+
   return dbPromise;
 }
 

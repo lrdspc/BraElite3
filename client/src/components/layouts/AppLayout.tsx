@@ -32,15 +32,15 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       navigate('/login');
     }
   }, [isLoading, isLoggedIn, navigate, location]);
-  
+
   // Monitorar o status de conexão
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
-    
+
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
-    
+
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
@@ -72,7 +72,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   if (isLoading) {
     return <LoadingScreen />;
   }
-  
+
   if (!isLoggedIn || !user) {
     return null; // Will redirect to login via the useEffect
   }
@@ -81,7 +81,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     <div className="min-h-screen flex flex-col bg-gray-50">
       {/* Mobile Header - otimizado para dispositivos móveis */}
       {isMobile && (
-        <MobileHeader 
+        <MobileHeader
           onMenuClick={toggleMobileSidebar}
         />
       )}
@@ -112,15 +112,15 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       <div className="flex flex-grow h-full md:pt-0">
         {/* Desktop Sidebar - oculto em dispositivos móveis */}
         <aside className="hidden md:block">
-          <DesktopSidebar 
+          <DesktopSidebar
             user={user}
           />
         </aside>
 
         {/* Mobile Sidebar - renderizado condicionalmente */}
-        <MobileSidebar 
+        <MobileSidebar
           user={user}
-          isOpen={mobileSidebarOpen} 
+          isOpen={mobileSidebarOpen}
           onClose={() => setMobileSidebarOpen(false)}
         />
 
@@ -128,7 +128,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         <main className="flex-1 md:ml-64 min-h-screen pb-16 md:pb-8 transition-all duration-200 ease-in-out content-area">
           {/* Espaçador para garantir que o conteúdo não fique abaixo do cabeçalho móvel */}
           {isMobile && <div className="header-spacer"></div>}
-          
+
           <div className="max-w-7xl mx-auto px-4 pt-2 sm:px-6 sm:pt-3 lg:px-8 responsive-container-xl">
             {children}
           </div>
@@ -141,23 +141,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           </div>
         )}
       </div>
-      
-      {/* Indicador de Sincronização - Visível apenas quando dados estão sendo sincronizados */}
-      <div id="sync-indicator" className="fixed bottom-16 md:bottom-2 right-2 hidden items-center bg-white shadow-lg rounded-full py-1 px-3 text-xs font-medium text-gray-700 z-50">
-        <div className="animate-pulse h-2 w-2 rounded-full bg-brasilit-blue mr-2"></div>
-          <div className="max-w-7xl mx-auto px-4 pt-2 sm:px-6 sm:pt-3 lg:px-8 responsive-container-xl">
-            {children}
-          </div>
-        </main>
 
-        {/* Navegação Inferior para Dispositivos Móveis - Otimizada */}
-        {isMobile && (
-          <div className="fixed bottom-0 w-full z-50 optimize-gpu">
-            <MobileBottomNav />
-          </div>
-        )}
-      </div>
-      
       {/* Indicador de Sincronização - Visível apenas quando dados estão sendo sincronizados */}
       <div id="sync-indicator" className="fixed bottom-16 md:bottom-2 right-2 hidden items-center bg-white shadow-lg rounded-full py-1 px-3 text-xs font-medium text-gray-700 z-50">
         <div className="animate-pulse h-2 w-2 rounded-full bg-brasilit-blue mr-2"></div>
@@ -166,7 +150,5 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     </div>
   );
 };
-
-export default AppLayout;
 
 export default AppLayout;
