@@ -1,240 +1,174 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
-import { useLocation } from 'wouter';
-import { apiRequest } from '@/lib/queryClient';
-import { initDB } from '@/lib/db';
-import { useToast } from '@/hooks/use-toast';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { Session, User } from '@supabase/supabase-js';
+import { supabase } from '../lib/db';
 
-interface User {
-  id: number;
-  username: string;
-  name: string;
-  email: string;
-  role: string;
-  avatar?: string;
-}
-
-interface AuthContextType {
+// Definindo o tipo de contexto de autenticação
+type AuthContextType = {
   user: User | null;
-  isLoading: boolean;
-  isLoggedIn: boolean;
-  login: (username: string, password: string) => Promise<void>;
-  logout: () => Promise<void>;
-}
+  session: Session | null;
+  loading: boolean;
+  signIn: (email: string, password: string) => Promise<void>;
+  signOut: () => Promise<void>;
+  signUp: (email: string, password: string, nome: string) => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
+};
 
-const AuthContext = createContext<AuthContextType>({
-  user: null,
-  isLoading: true,
-  isLoggedIn: false,
-  login: async () => {},
-  logout: async () => {},
-});
+// Criando o contexto de autenticação
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const useAuth = () => useContext(AuthContext);
+// Hook personalizado para usar o contexto de autenticação
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth deve ser usado dentro de um AuthProvider');
+  }
+  return context;
+};
 
+// Componente provedor de autenticação
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [location, navigate] = useLocation();
-  const { toast } = useToast();
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Initialize IndexedDB when auth context is mounted
   useEffect(() => {
-    initDB().catch(err => {
-      console.error('Failed to initialize IndexedDB', err);
-      toast({
-        title: 'Erro de inicialização',
-        description: 'Falha ao inicializar o banco de dados local.',
-        variant: 'destructive',
-      });
+    // Configura o listener para mudanças de autenticação
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
     });
+
+    // Carrega a sessão atual
+    const getInitialSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
+    };
+
+    getInitialSession();
+
+    // Limpa o subscription quando o componente é desmontado
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
-  // Check session status on mount
-  const { data, isLoading, isError } = useQuery({
-    queryKey: ['/api/auth/session'],
-    queryFn: async ({ queryKey }) => {
-      try {
-        const res = await fetch(queryKey[0] as string, {
-          credentials: 'include',
-        });
-        
-        if (res.status === 401) {
-          return null;
-        }
-        
-        if (!res.ok) {
-          throw new Error('Network response was not ok');
-        }
-        
-        return res.json();
-      } catch (error) {
-        console.error('Error fetching session:', error);
-        return null;
-      }
-    },
-    retry: false,
-  });
-
-  useEffect(() => {
-    if (!isLoading) {
-      setUser(data);
-      
-      // Não vamos redirecionar aqui para evitar conflitos com os layouts
-      // Deixamos a lógica de redirecionamento para os componentes de layout
-    }
-  }, [data, isLoading]);
-
-  // Usuários de demonstração para facilitar o acesso
-  const demoUsers = [
-    {
-      id: 1,
-      username: 'tecnico',
-      password: '123456',
-      name: 'João da Silva',
-      email: 'joao.silva@brasilit.com.br',
-      role: 'tecnico',
-      avatar: '/avatars/tecnico.png'
-    },
-    {
-      id: 2,
-      username: 'gestor',
-      password: '123456',
-      name: 'Maria Souza',
-      email: 'maria.souza@brasilit.com.br',
-      role: 'gestor',
-      avatar: '/avatars/gestor.png'
-    },
-    {
-      id: 3,
-      username: 'admin',
-      password: '123456',
-      name: 'Carlos Oliveira',
-      email: 'carlos.oliveira@brasilit.com.br',
-      role: 'admin',
-      avatar: '/avatars/admin.png'
-    }
-  ];
-
-  // Login mutation modificado para aceitar credenciais de demonstração
-  const loginMutation = useMutation({
-    mutationFn: async ({ username, password }: { username: string; password: string }) => {
-      // Primeiro, verifica se é um dos usuários de demonstração
-      const demoUser = demoUsers.find(
-        user => user.username === username && user.password === password
-      );
-      
-      if (demoUser) {
-        // Simula uma pequena pausa para dar a impressão de que está processando
-        await new Promise(resolve => setTimeout(resolve, 800));
-        // Retorna o usuário de demonstração sem as informações sensíveis
-        const { password: _, ...safeUser } = demoUser;
-        return safeUser;
-      }
-      
-      // Se não for um usuário de demonstração, tenta o login normal
-      try {
-        const res = await apiRequest('POST', '/api/auth/login', { username, password });
-        return res.json();
-      } catch (error) {
-        // Mensagem amigável se o servidor estiver indisponível
-        throw new Error('Credenciais inválidas. Tente usar os logins de demonstração: tecnico/123456, gestor/123456 ou admin/123456');
-      }
-    },
-    onSuccess: (userData) => {
-      setUser(userData);
-      
-      // Salva o usuário na sessão local para persistência
-      try {
-        localStorage.setItem('brasilit_user', JSON.stringify(userData));
-      } catch (error) {
-        console.warn('Não foi possível salvar sessão localmente:', error);
-      }
-      
-      navigate('/');
-      toast({
-        title: 'Login realizado com sucesso',
-        description: `Bem-vindo, ${userData.name}! Você está utilizando uma conta de demonstração.`,
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: 'Falha no login',
-        description: error.message || 'Use: tecnico/123456, gestor/123456 ou admin/123456',
-        variant: 'destructive',
-      });
-    },
-  });
-
-  // Verifica se há um usuário salvo localmente ao inicializar
-  useEffect(() => {
+  // Função para login
+  const signIn = async (email: string, password: string) => {
     try {
-      const savedUser = localStorage.getItem('brasilit_user');
-      if (savedUser && !user) {
-        const parsedUser = JSON.parse(savedUser);
-        setUser(parsedUser);
+      setLoading(true);
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      
+      if (error) {
+        throw error;
       }
     } catch (error) {
-      console.warn('Erro ao recuperar usuário da sessão local:', error);
+      console.error('Erro ao fazer login:', error);
+      throw error;
+    } finally {
+      setLoading(false);
     }
-  }, []);
-
-  // Logout mutation
-  const logoutMutation = useMutation({
-    mutationFn: async () => {
-      // Remove o usuário da sessão local
-      try {
-        localStorage.removeItem('brasilit_user');
-      } catch (error) {
-        console.warn('Erro ao remover sessão local:', error);
-      }
-      
-      // Tenta logout normal na API
-      try {
-        const res = await apiRequest('POST', '/api/auth/logout', {});
-        return res.json();
-      } catch (error) {
-        // Se falhar, não tem problema para a demo
-        return { success: true };
-      }
-    },
-    onSuccess: () => {
-      setUser(null);
-      navigate('/login');
-      toast({
-        title: 'Logout realizado com sucesso',
-        description: 'Você saiu da sua conta de demonstração.',
-      });
-    },
-    onError: (error: any) => {
-      // Força logout mesmo em caso de erro
-      setUser(null);
-      navigate('/login');
-      toast({
-        title: 'Logout concluído',
-        description: 'Você saiu da sua conta, mas ocorreu um erro de comunicação com o servidor.',
-      });
-    },
-  });
-
-  const login = async (username: string, password: string) => {
-    await loginMutation.mutateAsync({ username, password });
   };
 
-  const logout = async () => {
-    await logoutMutation.mutateAsync();
+  // Função para logout
+  const signOut = async () => {
+    try {
+      setLoading(true);
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        throw error;
+      }
+    } catch (error) {
+      console.error('Erro ao fazer logout:', error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Função para cadastro
+  const signUp = async (email: string, password: string, nome: string) => {
+    try {
+      setLoading(true);
+      
+      // Criar conta no Supabase Auth
+      const { data, error } = await supabase.auth.signUp({ 
+        email, 
+        password,
+        options: {
+          data: {
+            name: nome,
+          },
+        }
+      });
+      
+      if (error) {
+        throw error;
+      }
+
+      // Se o cadastro foi bem-sucedido, criar o perfil no banco de dados
+      if (data.user) {
+        const { error: profileError } = await supabase
+          .from('users')
+          .insert([{ 
+            id: data.user.id, 
+            name: nome, 
+            email,
+            role: 'inspector' 
+          }]);
+        
+        if (profileError) {
+          console.error('Erro ao criar perfil:', profileError);
+          // Em caso de erro ao criar o perfil, deletar o usuário criado
+          await supabase.auth.admin.deleteUser(data.user.id);
+          throw new Error('Erro ao criar perfil do usuário');
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao criar conta:', error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Função para recuperação de senha
+  const resetPassword = async (email: string) => {
+    try {
+      setLoading(true);
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + '/reset-password',
+      });
+      
+      if (error) {
+        throw error;
+      }
+    } catch (error) {
+      console.error('Erro ao solicitar redefinição de senha:', error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const value = {
+    user,
+    session,
+    loading,
+    signIn,
+    signOut,
+    signUp,
+    resetPassword,
   };
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        isLoading: isLoading || loginMutation.isPending || logoutMutation.isPending,
-        isLoggedIn: !!user,
-        login,
-        logout,
-      }}
-    >
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
 };
+
+export default AuthContext;
