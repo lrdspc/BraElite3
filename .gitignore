@@ -1,42 +1,52 @@
-# Arquivos e diretórios específicos da aplicação
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+
+# Testing
+coverage
+.nyc_output
+
+# Production
+build
 dist
 dist-ssr
-*.local
-coverage
+.next
+out
+
+# Misc
+.DS_Store
+*.pem
 .env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
-public/workbox-*.js
-public/sw.js
-stats.html
-*.pem
 
-# Logs
-logs
-*.log
+# Debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# Diretório node_modules
-node_modules
+# Vercel
+.vercel
 
-# Editor directories and files
+# Supabase
+supabase/.temp
+.supabase
+**/supabase/.branches
+**/supabase/.temp
+.env*.local
+
+# IDE
+.idea
 .vscode/*
 !.vscode/extensions.json
 !.vscode/settings.json
+!.vscode/tasks.json
 !.vscode/launch.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
 
 # Banco de dados e migrações
 *.sqlite
