@@ -1,44 +1,5 @@
-import { pgTable, text, serial, integer, boolean, timestamp, jsonb, real } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
-
-// Non-conformity categories and types
-export const nonConformityCategories = [
-  "structural",
-  "installation",
-  "material",
-  "aesthetic",
-  "water_infiltration",
-  "other"
-] as const;
-
-export const standardNonConformities = [
-  "broken_tiles",
-  "misaligned_tiles",
-  "incorrect_overlap",
-  "missing_fasteners",
-  "improper_sealing",
-  "water_damage",
-  "color_variation",
-  "cracked_ridge",
-  "inadequate_slope",
-  "damaged_flashing",
-  "incorrect_spacing",
-  "thermal_expansion_issues",
-  "improper_ventilation",
-  "structural_overload"
-] as const;
-
-export const weatherConditions = [
-  "sunny",
-  "cloudy",
-  "partly_cloudy",
-  "rainy",
-  "stormy",
-  "windy",
-  "foggy",
-  "snowy"
-] as const;
 
 // User schema
 export const users = pgTable("users", {
@@ -109,17 +70,6 @@ export const inspections = pgTable("inspections", {
   scheduledDate: timestamp("scheduled_date"),
   startTime: timestamp("start_time"),
   endTime: timestamp("end_time"),
-  // Geolocation data
-  startLatitude: text("start_latitude"),
-  startLongitude: text("start_longitude"),
-  endLatitude: text("end_latitude"),
-  endLongitude: text("end_longitude"),
-  // Weather conditions
-  weatherCondition: text("weather_condition"),
-  temperature: real("temperature"),
-  humidity: real("humidity"),
-  windSpeed: real("wind_speed"),
-  // Roof details
   roofModel: text("roof_model"),
   quantity: integer("quantity"),
   area: integer("area"),
@@ -130,7 +80,6 @@ export const inspections = pgTable("inspections", {
   conclusion: text("conclusion"),
   recommendation: text("recommendation"),
   signature: text("signature"),
-  clientSignature: text("client_signature"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -146,19 +95,8 @@ export const evidences = pgTable("evidences", {
   id: serial("id").primaryKey(),
   inspectionId: integer("inspection_id").notNull(),
   type: text("type").notNull(), // photo, document, etc.
-  // Non-conformity details
-  category: text("category"), // category of non-conformity (from nonConformityCategories)
-  nonConformityType: text("non_conformity_type"), // type of non-conformity (from standardNonConformities)
-  severity: text("severity"), // low, medium, high
-  // File details
   fileUrl: text("file_url").notNull(),
-  thumbnailUrl: text("thumbnail_url"), // compressed thumbnail for faster loading
-  fileSize: integer("file_size"), // size in bytes
-  // Annotations
-  annotations: jsonb("annotations"), // JSON data for annotations (arrows, circles, measurements)
-  // Metadata
   notes: text("notes"),
-  location: text("location"), // specific location within the project
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -183,55 +121,10 @@ export type InsertInspection = z.infer<typeof insertInspectionSchema>;
 export type Evidence = typeof evidences.$inferSelect;
 export type InsertEvidence = z.infer<typeof insertEvidenceSchema>;
 
-// Zod schemas for enums
-export const nonConformityCategorySchema = z.enum(nonConformityCategories);
-export const standardNonConformitySchema = z.enum(standardNonConformities);
-export const weatherConditionSchema = z.enum(weatherConditions);
-export const severitySchema = z.enum(["low", "medium", "high"]);
-
-// Extended validation schemas
-export const weatherDataSchema = z.object({
-  weatherCondition: weatherConditionSchema.optional(),
-  temperature: z.number().optional(),
-  humidity: z.number().optional(),
-  windSpeed: z.number().optional(),
-});
-
-export const geolocationSchema = z.object({
-  latitude: z.string().optional(),
-  longitude: z.string().optional(),
-});
-
-export const annotationSchema = z.object({
-  type: z.enum(["arrow", "circle", "rectangle", "text", "measurement"]),
-  points: z.array(z.object({ x: z.number(), y: z.number() })),
-  color: z.string().optional(),
-  text: z.string().optional(),
-  width: z.number().optional(),
-  measurement: z.number().optional(),
-  unit: z.string().optional(),
-});
-
-export const nonConformitySchema = z.object({
-  category: nonConformityCategorySchema,
-  type: standardNonConformitySchema,
-  severity: severitySchema,
-  description: z.string().optional(),
-});
-
 // Validation schemas (extended from insert schemas)
 export const loginSchema = z.object({
   username: z.string().min(1, "Usuário é obrigatório"),
   password: z.string().min(1, "Senha é obrigatória"),
 });
 
-// Export types for the new schemas
-export type NonConformityCategory = z.infer<typeof nonConformityCategorySchema>;
-export type StandardNonConformity = z.infer<typeof standardNonConformitySchema>;
-export type WeatherCondition = z.infer<typeof weatherConditionSchema>;
-export type Severity = z.infer<typeof severitySchema>;
-export type WeatherData = z.infer<typeof weatherDataSchema>;
-export type Geolocation = z.infer<typeof geolocationSchema>;
-export type Annotation = z.infer<typeof annotationSchema>;
-export type NonConformity = z.infer<typeof nonConformitySchema>;
 export type LoginCredentials = z.infer<typeof loginSchema>;
