@@ -21,6 +21,85 @@ Um aplicativo web progressivo (PWA) desenvolvido para a Brasilit, permitindo que
 - **Backend**: Node.js com Express
 - **Dados**: Suporte a PostgreSQL e armazenamento em memória para desenvolvimento
 
+## Fluxo de Deploy e Branches
+
+Este projeto utiliza um fluxo de trabalho moderno com branches dedicadas para ambientes de staging e produção, integração contínua com Vercel e ambientes separados no Supabase.
+
+### Fluxograma ASCII
+
+```
++---------------+
+| Start         |
++---------------+
+      |
+      v
++---------------+
+| Edit in Cursor|
++---------------+
+      |
+      v
++---------------+
+| Commit to beta|
++---------------+
+      |
+      v
++---------------+
+| Push to beta  |
++---------------+
+      |
+      v
++---------------+
+| Update Supabase staging (if needed) |
++---------------+
+      |
+      v
++---------------+
+| Vercel deploys preview |
++---------------+
+      |
+      v
++---------------+
+| Test preview  |
++---------------+
+      |
+      v
++---------------+
+| On approval:  |
+| - Update Supabase production (if needed) |
+| - Merge to final |
+| - Push to final |
++---------------+
+      |
+      v
++---------------+
+| Vercel deploys production |
++---------------+
+      |
+      v
++---------------+
+| End           |
++---------------+
+```
+
+### Resumo do Processo
+
+1. Edite o código localmente (Cursor, VS Code, etc).
+2. Commit e push para a branch `beta`.
+3. O Vercel faz deploy automático no ambiente de preview.
+4. Se houver mudanças no backend, atualize o Supabase staging.
+5. Teste o preview.
+6. Após aprovação:
+   - Atualize o Supabase produção (se necessário).
+   - Faça merge de `beta` para `final`.
+   - Push para `final`.
+7. O Vercel faz deploy automático em produção.
+
+### Dicas de Configuração
+
+- **Vercel**: Configure deploys automáticos para as branches `beta` e `final` e variáveis de ambiente específicas por branch.
+- **Supabase**: Use um projeto para staging (branch beta) e outro para produção (branch final). Atualize os ambientes conforme mudanças no backend.
+- **GitHub**: Utilize Pull Requests para promover código de `beta` para `final`.
+
 ## Pré-requisitos
 
 - Node.js 20.x
