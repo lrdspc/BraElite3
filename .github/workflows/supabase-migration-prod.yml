@@ -8,14 +8,9 @@ on:
 jobs:
   approve-and-migrate-prod:
     runs-on: ubuntu-latest
+    environment:
+      name: production
     steps:
-      - name: Aprovação manual
-        uses: trstringer/manual-approval@v1
-        with:
-          secret: ${{ secrets.GITHUB_TOKEN }}
-          approvers: lrdspc
-          minimum-approvals: 1
-
       - name: Checkout código
         uses: actions/checkout@v4
 
