@@ -19,13 +19,13 @@ const STATIC_ASSETS = [
   '/index.html',
   '/offline.html',
   '/manifest.json',
-  '/brasilit-icon-192.svg',
-  '/brasilit-icon-512.svg',
-  '/brasilit-icon-192-maskable.svg',
-  '/brasilit-icon-512-maskable.svg',
-  '/shortcut-dashboard.svg',
-  '/shortcut-inspection.svg',
-  '/shortcut-list.svg'
+  '/icons/brasilit-icon-192.svg',
+  '/icons/brasilit-icon-512.svg',
+  '/icons/brasilit-icon-192-maskable.svg',
+  '/icons/brasilit-icon-512-maskable.svg',
+  '/icons/shortcut-dashboard.svg',
+  '/icons/shortcut-inspection.svg',
+  '/icons/shortcut-list.svg'
 ];
 
 // Função helper para logs condicionais
@@ -397,8 +397,13 @@ async function navigationStrategy(request) {
     if (offlineResponse) {
       return offlineResponse;
     }
-    
     // Se até mesmo a página offline não estiver disponível
+    // Tenta buscar diretamente do cache de páginas (caso o nome do cache tenha mudado)
+    const pagesCache = await caches.open(CACHES.pages);
+    const fallbackOffline = await pagesCache.match(OFFLINE_URL);
+    if (fallbackOffline) {
+      return fallbackOffline;
+    }
     return new Response(
       '<html><body><h1>Você está offline</h1><p>E a página offline não está disponível.</p></body></html>',
       {
@@ -526,13 +531,13 @@ self.addEventListener('push', (event) => {
   const data = event.data?.json() || {
     title: 'Brasilit Vistorias',
     body: 'Nova notificação',
-    icon: '/brasilit-icon-192.svg'
+    icon: '/icons/brasilit-icon-192.svg'
   };
   
   const options = {
     body: data.body,
-    icon: data.icon || '/brasilit-icon-192.svg',
-    badge: '/brasilit-icon-192.svg',
+    icon: data.icon || '/icons/brasilit-icon-192.svg',
+    badge: '/icons/brasilit-icon-192.svg',
     data: data.url ? { url: data.url } : null,
     vibrate: [100, 50, 100]
   };

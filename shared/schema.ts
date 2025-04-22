@@ -1,5 +1,6 @@
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { pgTable, serial, text, integer, timestamp, jsonb } from "drizzle-orm/pg-core";
 
 // User schema
 export const users = pgTable("users", {
@@ -73,12 +74,8 @@ export const inspections = pgTable("inspections", {
   roofModel: text("roof_model"),
   quantity: integer("quantity"),
   area: integer("area"),
-  installationDate: timestamp("installation_date"),
-  warranty: text("warranty"),
-  invoice: text("invoice"),
-  technicalAnalysis: jsonb("technical_analysis"),
-  conclusion: text("conclusion"),
-  recommendation: text("recommendation"),
+  structure: text("structure"),
+  notes: text("notes"),
   signature: text("signature"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -105,26 +102,21 @@ export const insertEvidenceSchema = createInsertSchema(evidences).omit({
   createdAt: true,
 });
 
-// Export types
-export type User = typeof users.$inferSelect;
-export type InsertUser = z.infer<typeof insertUserSchema>;
-
-export type Client = typeof clients.$inferSelect;
-export type InsertClient = z.infer<typeof insertClientSchema>;
-
-export type Project = typeof projects.$inferSelect;
-export type InsertProject = z.infer<typeof insertProjectSchema>;
-
-export type Inspection = typeof inspections.$inferSelect;
-export type InsertInspection = z.infer<typeof insertInspectionSchema>;
-
-export type Evidence = typeof evidences.$inferSelect;
-export type InsertEvidence = z.infer<typeof insertEvidenceSchema>;
-
 // Validation schemas (extended from insert schemas)
 export const loginSchema = z.object({
   username: z.string().min(1, "Usuário é obrigatório"),
   password: z.string().min(1, "Senha é obrigatória"),
 });
 
+// Export types
+export type User = typeof users.$inferSelect;
+export type InsertUser = z.infer<typeof insertUserSchema>;
+export type Client = typeof clients.$inferSelect;
+export type InsertClient = z.infer<typeof insertClientSchema>;
+export type Project = typeof projects.$inferSelect;
+export type InsertProject = z.infer<typeof insertProjectSchema>;
+export type Inspection = typeof inspections.$inferSelect;
+export type InsertInspection = z.infer<typeof insertInspectionSchema>;
+export type Evidence = typeof evidences.$inferSelect;
+export type InsertEvidence = z.infer<typeof insertEvidenceSchema>;
 export type LoginCredentials = z.infer<typeof loginSchema>;

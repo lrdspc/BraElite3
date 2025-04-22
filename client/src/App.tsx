@@ -24,16 +24,12 @@ import InspectionDetailPage from "./pages/inspection/[id]";
 import NotFound from "./pages/not-found";
 
 // PWA initialization
-import { registerServiceWorker } from "./lib/pwa";
+import { useSWUpdate } from "./pwa/useSWUpdate";
+import { SWUpdateBanner } from "./pwa/SWUpdateBanner";
 
 function Router() {
   const [location] = useLocation();
   
-  // Register service worker for PWA functionality
-  useEffect(() => {
-    registerServiceWorker();
-  }, []);
-
   return (
     <Switch>
       {/* Public routes */}
@@ -115,11 +111,15 @@ function Router() {
 }
 
 function App() {
+  const updateAvailable = useSWUpdate();
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <Router />
         <Toaster />
+        {updateAvailable && (
+          <SWUpdateBanner onReload={() => window.location.reload()} />
+        )}
       </AuthProvider>
     </QueryClientProvider>
   );
