@@ -1,0 +1,27 @@
+name: Supabase Migration (Staging)
+
+on:
+  pull_request:
+    branches:
+      - beta
+
+jobs:
+  migrate-db-staging:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Instalar Supabase CLI
+        run: npm install -g supabase
+
+      - name: Rodar migração no Supabase (staging)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_STAGING_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_STAGING_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE: ${{ secrets.SUPABASE_STAGING_SERVICE_ROLE }}
+        run: |
+          supabase db push --project-ref $SUPABASE_URL
+
+      - name: Aviso de sucesso
+        run: echo "Migração do banco de dados Supabase (staging) realizada com sucesso."
