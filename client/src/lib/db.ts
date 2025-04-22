@@ -1,5 +1,102 @@
 import { openDB, deleteDB, DBSchema, IDBPDatabase } from 'idb';
-import { Client, Project, Inspection, Evidence, User } from '@shared/schema';
+import { createClient } from '@supabase/supabase-js';
+
+// Supabase configuration
+const supabaseUrl = import.meta.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseAnonKey = import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.warn('Supabase URL ou chave anônima não configurados no ambiente.');
+}
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+  },
+});
+
+// Tipos para as tabelas principais do banco de dados
+export type User = {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  role: 'admin' | 'inspector' | 'viewer';
+  created_at: string;
+  updated_at: string;
+};
+
+export type Client = {
+  id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  document?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  postal_code?: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type Project = {
+  id: string;
+  client_id: string;
+  name: string;
+  description?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  postal_code?: string;
+  status: 'active' | 'completed' | 'cancelled';
+  created_at: string;
+  updated_at: string;
+};
+
+export type Product = {
+  id: string;
+  name: string;
+  description?: string;
+  category?: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type Inspection = {
+  id: string;
+  project_id: string;
+  inspector_id: string;
+  status: 'draft' | 'in_progress' | 'completed' | 'cancelled';
+  inspection_date: string;
+  conclusion?: string;
+  technical_opinion?: string;
+  weather_conditions?: string;
+  temperature?: number;
+  humidity?: number;
+  latitude?: number;
+  longitude?: number;
+  created_at: string;
+  updated_at: string;
+  completed_at?: string;
+};
+
+export type Evidence = {
+  id: string;
+  inspection_id: string;
+  file_path: string;
+  file_type: string;
+  description?: string;
+  annotations?: any;
+  created_at: string;
+  updated_at: string;
+};
+
+// Funções de sincronização offline
+export const syncQueue = async () => {
+  // Implementar lógica para sincronizar dados offline
+};
 
 export interface BrasilitDB extends DBSchema {
   clients: {

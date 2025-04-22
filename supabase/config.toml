@@ -1,0 +1,38 @@
+# Este é um arquivo de configuração para o Supabase CLI
+# Para mais informações: https://supabase.io/docs/reference/cli/config
+
+project_id = "seu-project-id-do-supabase"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "storage"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+[studio]
+enabled = true
+port = 54323
+
+[inbucket]
+enabled = true
+port = 54324
+
+[storage]
+enabled = true
+file_size_limit = 50000000
+
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["https://brasilit-beta.vercel.app"]
+jwt_expiry = 3600
+disable_signup = false
+
+[realtime]
+enabled = true

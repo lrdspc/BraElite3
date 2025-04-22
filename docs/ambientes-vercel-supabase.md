@@ -1,51 +1,156 @@
-# Configuração de Variáveis de Ambiente
+# Configuração dos Ambientes Vercel e Supabase
 
-## Vercel
+Este documento explica como configurar corretamente os ambientes Vercel e Supabase seguindo o fluxo de desenvolvimento definido no projeto.
 
-- Configure deploy automático para as branches:
-  - `beta` (preview/staging)
-  - `final` (produção)
-- Adicione variáveis de ambiente específicas por branch em:
-  - Vercel > Project Settings > Environment Variables
-- Exemplos de variáveis:
-  - `SUPABASE_URL`
-  - `SUPABASE_ANON_KEY`
-  - `SUPABASE_SERVICE_ROLE`
-  - Outras chaves sensíveis do seu projeto
+## 1. Configuração do Supabase
 
-## Supabase
+### 1.1. Criação do Projeto
 
-- Crie dois projetos separados:
-  - **Staging**: use as credenciais na branch `beta`
-  - **Produção**: use as credenciais na branch `final`
-- Documente as URLs e chaves de cada ambiente para referência da equipe.
+1. Acesse [https://app.supabase.io/](https://app.supabase.io/) e faça login
+2. Clique em "New Project"
+3. Preencha os dados do projeto:
+   - Nome: `brasilit-app`
+   - Senha de banco de dados: Crie uma senha forte
+   - Região: Escolha a região mais próxima do Brasil (geralmente `us-east-1`)
+4. Clique em "Create new project"
 
-## Integração com Supabase - Projeto "Bra-Elite"
+### 1.2. Configuração do Banco de Dados
 
-### Variáveis de Ambiente
+1. Após a criação do projeto, vá para "SQL Editor"
+2. Cole o conteúdo do arquivo `supabase/migrations/20250421_initial_schema.sql`
+3. Clique em "Run" para criar as tabelas e configurações iniciais
 
-Adicione no Vercel as seguintes variáveis de ambiente, obtidas no painel do Supabase do projeto "Bra-Elite":
+### 1.3. Configuração da Autenticação
 
-- `SUPABASE_URL` (URL do projeto)
-- `SUPABASE_ANON_KEY` (chave pública)
-- `SUPABASE_SERVICE_ROLE` (chave de service role, se necessário)
+1. Vá para "Authentication" > "Settings"
+2. Ative os provedores de autenticação desejados (Email, Google, etc.)
+3. Configure as URLs de redirecionamento:
+   - Site URL: `https://brasilit.vercel.app` (ou o domínio final)
+   - Redirect URLs:
+     - `https://brasilit.vercel.app/login`
+     - `https://brasilit-beta.vercel.app/login`
+     - `http://localhost:3000/login`
 
-Configure-as separadamente para os ambientes:
-- **Staging (`beta`)**: use as credenciais do Supabase para staging
-- **Produção (`final`)**: use as credenciais do Supabase para produção
+### 1.4. Obtenção das Credenciais
 
-### Atualização do Supabase (Checklist)
+1. Vá para "Settings" > "API"
+2. Copie:
+   - URL do projeto
+   - Anon Key (chave anônima)
+   - Service Role Key (para uso no CI/CD)
+3. Guarde essas informações para usar nas variáveis de ambiente
 
-- [ ] Se houver alterações no backend, execute:
-  - Staging: `supabase db push` usando as credenciais do ambiente de staging
-  - Produção: `supabase db push` usando as credenciais do ambiente de produção (apenas após aprovação dos testes)
-- [ ] Documente toda alteração de schema/migração via Pull Request ou Issue
+### 1.5. Migrações de Banco de Dados
 
-### Dicas
-- Nunca use as chaves de produção em ambientes de teste.
-- Mantenha os ambientes sincronizados, mas só promova para produção após validação.
+Para gerenciar migrações:
 
----
+```bash
+# Conectar ao projeto Supabase
+supabase link --project-ref SEU_PROJECT_ID
 
-> Consulte o README.md e os templates de PR/issue para garantir o fluxo correto.
-> Consulte este documento e o README.md sempre que for necessário atualizar variáveis ou ambientes do Supabase.
+# Aplicar migrações
+supabase db push
+
+# Criar nova migração
+supabase migration new nome_da_migracao
+
+# A migração será criada em supabase/migrations/
+```
+
+## 2. Configuração do Vercel
+
+### 2.1. Criação do Projeto
+
+1. Acesse [https://vercel.com/](https://vercel.com/) e faça login
+2. Clique em "New Project"
+3. Importe o repositório do GitHub
+4. Configure:
+   - Framework Preset: Vite
+   - Root Directory: `./` (raiz)
+   - Build Command: `npm run build`
+   - Output Directory: `dist`
+
+### 2.2. Configuração das Branches
+
+1. Vá para "Settings" > "Git"
+2. Configure:
+   - Production Branch: `final`
+   - Preview Branches:
+     - Ative "Preview branches different from Production branch"
+     - Adicione a branch `beta`
+
+### 2.3. Configuração das Variáveis de Ambiente
+
+1. Vá para "Settings" > "Environment Variables"
+2. Adicione:
+   - `NEXT_PUBLIC_SUPABASE_URL`: URL do seu projeto Supabase
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Chave anônima do Supabase
+   - Outras variáveis específicas do projeto
+3. Configure os ambientes para cada variável:
+   - Production: Variáveis para ambiente de produção
+   - Preview: Variáveis para ambiente de testes
+   - Development: Variáveis para ambiente local
+
+## 3. Configuração do GitHub Actions
+
+### 3.1. Configuração dos Secrets
+
+Adicione os seguintes secrets no repositório GitHub (Settings > Secrets and Variables > Actions):
+
+- `SUPABASE_ACCESS_TOKEN`: Token de acesso do Supabase (da sua conta)
+- `SUPABASE_PROJECT_ID`: ID do projeto Supabase
+- `VERCEL_TOKEN`: Token de API do Vercel
+- `VERCEL_ORG_ID`: ID da organização no Vercel
+- `VERCEL_PROJECT_ID`: ID do projeto no Vercel
+
+### 3.2. Workflows
+
+O projeto já está configurado com workflows para:
+
+1. Teste e deploy automático no Vercel
+2. Aplicação de migrações do Supabase
+
+## 4. Desenvolvimento Local
+
+### 4.1. Variáveis de Ambiente Locais
+
+1. Copie o arquivo `.env.example` para `.env`:
+   ```bash
+   cp .env.example .env
+   ```
+
+2. Preencha as variáveis com valores do ambiente de desenvolvimento
+
+### 4.2. Desenvolvimento com Supabase Local
+
+Para usar o Supabase localmente:
+
+```bash
+# Inicia o Supabase localmente
+supabase start
+
+# Obtém as URLs e chaves locais
+supabase status
+
+# Para os serviços locais
+supabase stop
+```
+
+### 4.3. Supabase CLI
+
+Instale a CLI do Supabase para desenvolvimento:
+
+```bash
+# Windows (PowerShell)
+iwr -useb https://cli.supabase.com/install.ps1 | iex
+
+# macOS / Linux
+curl -s https://cli.supabase.com/install.sh | bash
+```
+
+## 5. Fluxo de Trabalho
+
+1. Desenvolva na branch `beta`
+2. Teste no ambiente de preview gerado pelo Vercel
+3. Quando tudo estiver pronto, mescle `beta` em `final`
+4. O deploy para produção será automático
