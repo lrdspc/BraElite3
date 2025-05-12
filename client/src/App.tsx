@@ -22,25 +22,29 @@ import ProfilePage from "./pages/profile";
 import NewInspectionPage from "./pages/inspection/new";
 import InspectionDetailPage from "./pages/inspection/[id]";
 import NotFound from "./pages/not-found";
+import ShareTargetPage from "./pages/share-target"; // Importando a nova página
 
 // PWA initialization
-import { registerServiceWorker } from "./lib/pwa";
+import { ServiceWorkerManager } from "./components/shared/ServiceWorkerManager";
 
 function Router() {
   const [location] = useLocation();
   
-  // Register service worker for PWA functionality
-  useEffect(() => {
-    registerServiceWorker();
-  }, []);
+  // O Service Worker agora é registrado no main.tsx
 
   return (
-    <Switch>
-      {/* Public routes */}
+    <Switch>      {/* Public routes */}
       <Route path="/login">
         <AuthLayout>
           <LoginPage />
         </AuthLayout>
+      </Route>
+      
+      {/* Share Target route */}
+      <Route path="/share-target">
+        <AppLayout>
+          <ShareTargetPage />
+        </AppLayout>
       </Route>
       
       {/* Protected routes */}
@@ -120,6 +124,7 @@ function App() {
       <AuthProvider>
         <Router />
         <Toaster />
+        <ServiceWorkerManager />
       </AuthProvider>
     </QueryClientProvider>
   );

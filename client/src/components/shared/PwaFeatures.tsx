@@ -1,18 +1,23 @@
 import React, { useState } from 'react';
 import ShareButton from './ShareButton';
 import NotificationBadge from './NotificationBadge';
+import { InstallPwaButton } from './InstallPwaButton';
+import { ServiceWorkerManager } from './ServiceWorkerManager';
 import { Button } from '@/components/ui/button';
-import { Bell, Plus, Minus } from 'lucide-react';
-import { registerWidgetProvider } from '@/lib/pwa';
+import { Bell, Plus, Minus, RefreshCw } from 'lucide-react';
+import { registerWidgetProvider, isOnline, processSyncQueue } from '@/lib/pwa';
 
 /**
  * PwaFeatures component that demonstrates the PWA features
  * - Web Share API
  * - Badging API
  * - Windows Widgets API
+ * - App Installation
+ * - Service Worker updates
  */
 const PwaFeatures: React.FC = () => {
   const [notificationCount, setNotificationCount] = useState(0);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const incrementNotifications = () => {
     setNotificationCount(prev => prev + 1);
@@ -35,8 +40,47 @@ const PwaFeatures: React.FC = () => {
     }
   };
 
+  const handleSync = async () => {
+    if (!isOnline()) {
+      alert('Você está offline. Verifique sua conexão e tente novamente.');
+      return;
+    }
+    
+    setIsSyncing(true);
+    try {
+      await processSyncQueue();
+      alert('Sincronização concluída com sucesso!');
+    } catch (error) {
+      console.error('Erro durante sincronização:', error);
+      alert('Ocorreu um erro durante a sincronização. Tente novamente mais tarde.');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   return (
     <div className="space-y-6 p-4 bg-white rounded-lg shadow-sm">
+      <ServiceWorkerManager showUpdates={true} />
+
+      <div>
+        <h3 className="text-lg font-medium mb-2">Instalação do App</h3>
+        <p className="text-sm text-gray-500 mb-3">
+          Instale o aplicativo em seu dispositivo para uma experiência aprimorada.
+        </p>
+        <InstallPwaButton />
+      </div>
+
+      <div>
+        <h3 className="text-lg font-medium mb-2">Sincronização</h3>
+        <p className="text-sm text-gray-500 mb-3">
+          Sincronize dados manualmente enquanto estiver online.
+        </p>
+        <Button onClick={handleSync} disabled={isSyncing || !isOnline()}>
+          <RefreshCw className={`mr-2 h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
+          {isSyncing ? 'Sincronizando...' : 'Sincronizar Agora'}
+        </Button>
+      </div>
+
       <div>
         <h3 className="text-lg font-medium mb-2">Compartilhamento</h3>
         <p className="text-sm text-gray-500 mb-3">

@@ -123,6 +123,65 @@ async function getSyncQueue() {
   }
 }
 
+// Função para obter item da fila de sincronização do IndexedDB por ID
+async function getSyncQueueItem(id) {
+  try {
+    const db = await openDB('sync-db', 1, {
+      upgrade(db) {
+        if (!db.objectStoreNames.contains('sync-queue')) {
+          db.createObjectStore('sync-queue', { keyPath: 'id', autoIncrement: true });
+        }
+      }
+    });
+    return await db.get('sync-queue', id);
+  } catch (error) {
+    log('Erro ao acessar item da fila de sincronização:', error);
+    return null;
+  }
+}
+
+// Função para atualizar item na fila de sincronização
+async function updateSyncQueueItem(id, data) {
+  try {
+    const db = await openDB('sync-db', 1, {
+      upgrade(db) {
+        if (!db.objectStoreNames.contains('sync-queue')) {
+          db.createObjectStore('sync-queue', { keyPath: 'id', autoIncrement: true });
+        }
+      }
+    });
+    
+    const item = await db.get('sync-queue', id);
+    if (item) {
+      await db.put('sync-queue', { ...item, ...data });
+      return true;
+    }
+    return false;
+  } catch (error) {
+    log('Erro ao atualizar item da fila de sincronização:', error);
+    return false;
+  }
+}
+
+// Função para remover item da fila de sincronização
+async function removeFromSyncQueueItem(id) {
+  try {
+    const db = await openDB('sync-db', 1, {
+      upgrade(db) {
+        if (!db.objectStoreNames.contains('sync-queue')) {
+          db.createObjectStore('sync-queue', { keyPath: 'id', autoIncrement: true });
+        }
+      }
+    });
+    
+    await db.delete('sync-queue', id);
+    return true;
+  } catch (error) {
+    log('Erro ao remover item da fila de sincronização:', error);
+    return false;
+  }
+}
+
 // Função para sincronizar dados com o servidor
 async function syncData() {
   log('Iniciando sincronização de dados...');
@@ -135,28 +194,41 @@ async function syncData() {
       return;
     }
     
-    // Processar cada item da fila
-    for (const item of syncQueue) {
+    // Processar cada item da fila em ordem (mais antigos primeiro)
+    const sortedQueue = [...syncQueue].sort((a, b) => a.timestamp - b.timestamp);
+    
+    for (const item of sortedQueue) {
       try {
+        // Incrementar contador de tentativas
+        const updatedAttempts = (item.attempts || 0) + 1;
+        await updateSyncQueueItem(item.id, { attempts: updatedAttempts });
+        
         const response = await fetch(item.url, {
           method: item.method,
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            // Incluir headers de autenticação se necessário
           },
-          body: item.body ? JSON.stringify(item.body) : undefined
+          body: item.body ? JSON.stringify(item.body) : undefined,
+          credentials: 'include'
         });
         
         if (response.ok) {
           // Remove item da fila se foi sincronizado com sucesso
-          // TODO: Implementar remoção do IndexedDB
-          log(`Item sincronizado com sucesso: ${item.url}`);
+          await removeFromSyncQueueItem(item.id);
+          log(`Item sincronizado com sucesso: ${item.url}, ID: ${item.id}`);
         } else {
-          throw new Error(`Falha na sincronização: ${response.status} ${response.statusText}`);
+          log(`Falha na sincronização: ${response.status} ${response.statusText} para item ID: ${item.id}`);
+          
+          // Se atingiu o número máximo de tentativas, remover da fila
+          if (updatedAttempts >= 5) {
+            await removeFromSyncQueueItem(item.id);
+            log(`Número máximo de tentativas atingido para o item: ${item.id}, removendo da fila`);
+          }
         }
       } catch (itemError) {
-        log(`Erro ao sincronizar item ${item.url}:`, itemError);
-        // Manter na fila para tentar novamente mais tarde
-        // TODO: Incrementar contador de tentativas
+        log(`Erro ao sincronizar item ${item.url} (ID: ${item.id}):`, itemError);
+        // O contador de tentativas já foi incrementado acima
       }
     }
     
@@ -273,7 +345,7 @@ self.addEventListener('activate', (event) => {
   })());
 });
 
-// Evento de fetch - responder com recursos em cache ou buscar na rede
+// Evento de fetch principal - gerenciar recursos em cache ou buscar na rede
 self.addEventListener('fetch', (event) => {
   const request = event.request;
   
@@ -282,29 +354,9 @@ self.addEventListener('fetch', (event) => {
     return;
   }
   
-  // Ignorar requisições não GET
+  // Gerenciar requisições não GET (POST/PUT/DELETE) durante offline
   if (request.method !== 'GET') {
-    // Para requisições POST/PUT/DELETE durante offline,
-    // adicionar à fila de sincronização
-    if (!navigator.onLine) {
-      log('Dispositivo offline. Enfileirando requisição para sincronização posterior');
-      // TODO: Implementar enfileiramento no IndexedDB
-      
-      // Responder com status apropriado
-      event.respondWith(
-        new Response(
-          JSON.stringify({ 
-            success: true, 
-            offline: true, 
-            message: 'Request queued for sync when online' 
-          }),
-          { 
-            status: 202, 
-            headers: { 'Content-Type': 'application/json' } 
-          }
-        )
-      );
-    }
+    // Já tratamos requisições não-GET no primeiro listener de fetch
     return;
   }
   

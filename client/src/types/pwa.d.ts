@@ -38,6 +38,19 @@ interface Navigator {
   canShare?(data?: { files?: File[] }): boolean;
 }
 
+// Periodic Background Sync API
+interface ServiceWorkerRegistration {
+  periodicSync?: {
+    register(tag: string, options?: { minInterval: number }): Promise<void>;
+    unregister(tag: string): Promise<void>;
+    getTags(): Promise<string[]>;
+  };
+}
+
+interface PermissionDescriptor {
+  name: string;
+}
+
 // Windows Widgets API
 interface Window {
   widgets?: {
