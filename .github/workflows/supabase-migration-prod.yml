@@ -1,0 +1,29 @@
+name: Supabase Migration (Production)
+
+on:
+  pull_request:
+    branches:
+      - final
+
+jobs:
+  approve-and-migrate-prod:
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Instalar Supabase CLI
+        run: npm install -g supabase
+
+      - name: Rodar migração no Supabase (produção)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_PROD_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_PROD_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE: ${{ secrets.SUPABASE_PROD_SERVICE_ROLE }}
+        run: |
+          supabase db push --project-ref $SUPABASE_URL
+
+      - name: Aviso de sucesso
+        run: echo "Migração do banco de dados Supabase (produção) realizada com sucesso."

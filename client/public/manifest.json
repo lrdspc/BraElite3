@@ -134,5 +134,19 @@
         "application/brasilit-inspection": [".brinsp"]
       }
     }
+  ],
+  "widgets": [
+    {
+      "name": "brasilit-dashboard",
+      "description": "Mostra estatísticas de vistorias técnicas",
+      "tag": "dashboard",
+      "template": "widgets/dashboard.html",
+      "data": "/api/widget-data",
+      "type": "application/json",
+      "update": {
+        "frequency": "periodic",
+        "period": 900
+      }
+    }
   ]
 }

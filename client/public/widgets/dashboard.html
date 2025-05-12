@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Brasilit Dashboard Widget</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #ffffff;
+      color: #333333;
+      overflow: hidden;
+    }
+    
+    .widget-container {
+      width: 100%;
+      height: 100%;
+      padding: 12px;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .widget-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    
+    .widget-logo {
+      width: 24px;
+      height: 24px;
+      margin-right: 8px;
+    }
+    
+    .widget-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin: 0;
+    }
+    
+    .widget-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .stat-card {
+      background-color: #f5f5f5;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .stat-label {
+      font-size: 12px;
+      color: #666666;
+    }
+    
+    .stat-value {
+      font-size: 16px;
+      font-weight: 600;
+      color: #EE1B24;
+    }
+    
+    .widget-footer {
+      font-size: 10px;
+      color: #999999;
+      text-align: center;
+      margin-top: 8px;
+    }
+    
+    @media (prefers-color-scheme: dark) {
+      body {
+        background-color: #1e1e1e;
+        color: #f0f0f0;
+      }
+      
+      .stat-card {
+        background-color: #2d2d2d;
+      }
+      
+      .stat-label {
+        color: #b0b0b0;
+      }
+      
+      .widget-footer {
+        color: #777777;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="widget-container">
+    <div class="widget-header">
+      <svg class="widget-logo" width="24" height="24" viewBox="0 0 180 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M30 0H60C77.6731 0 90 12.3269 90 30C90 47.6731 77.6731 60 60 60H30C12.3269 60 0 47.6731 0 30C0 12.3269 12.3269 0 30 0Z" fill="#EE1B24"/>
+        <path d="M120 0H150C167.673 0 180 12.3269 180 30C180 47.6731 167.673 60 150 60H120C102.327 60 90 47.6731 90 30C90 12.3269 102.327 0 120 0Z" fill="#EE1B24"/>
+      </svg>
+      <h1 class="widget-title">Brasilit Vistorias</h1>
+    </div>
+    
+    <div class="widget-content">
+      <div class="stat-card">
+        <div class="stat-label">Vistorias Hoje</div>
+        <div class="stat-value">12</div>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-label">Pendentes</div>
+        <div class="stat-value">5</div>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-label">Concluídas (Mês)</div>
+        <div class="stat-value">87</div>
+      </div>
+    </div>
+    
+    <div class="widget-footer">
+      Última atualização: <span id="last-update">Agora</span>
+    </div>
+  </div>
+  
+  <script>
+    // Atualizar a data da última atualização
+    function updateLastUpdateTime() {
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      document.getElementById('last-update').textContent = timeStr;
+    }
+    
+    // Atualizar os dados do widget (simulado)
+    function updateWidgetData() {
+      // Em uma implementação real, isso buscaria dados da API
+      const vistorias = Math.floor(Math.random() * 20) + 5;
+      const pendentes = Math.floor(Math.random() * 10) + 1;
+      const concluidas = Math.floor(Math.random() * 50) + 50;
+      
+      document.querySelectorAll('.stat-value')[0].textContent = vistorias;
+      document.querySelectorAll('.stat-value')[1].textContent = pendentes;
+      document.querySelectorAll('.stat-value')[2].textContent = concluidas;
+      
+      updateLastUpdateTime();
+    }
+    
+    // Inicializar
+    updateWidgetData();
+    
+    // Atualizar a cada 15 minutos
+    setInterval(updateWidgetData, 15 * 60 * 1000);
+    
+    // Comunicação com a aplicação principal (se necessário)
+    window.addEventListener('message', (event) => {
+      if (event.data && event.data.type === 'UPDATE_WIDGET') {
+        updateWidgetData();
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, timestamp, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -96,7 +96,6 @@ export const evidences = pgTable("evidences", {
   id: serial("id").primaryKey(),
   inspectionId: integer("inspection_id").notNull(),
   type: text("type").notNull(), // photo, document, etc.
-  category: text("category"), // category of non-conformity
   fileUrl: text("file_url").notNull(),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow(),
