@@ -78,27 +78,33 @@ const ReportsPage: React.FC = () => {
 
   const handleDownloadReport = async (report: any) => {
     try {
-      // Solicitar a geração do relatório
-      const response = await fetch(`/api/inspections/${report.id}/generate-report`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
+      // Import the document generator dynamically
+      const { generateWordDocument } = await import('@/lib/docGenerator');
+
+      // Prepare report data
+      const reportData = {
+        protocolNumber: report.protocolNumber,
+        clientName: report.clientName || `Cliente #${report.clientId}`,
+        projectName: report.projectName || `Projeto #${report.projectId}`,
+        address: report.address,
+        number: report.number,
+        city: report.city,
+        state: report.state,
+        scheduledDate: report.scheduledDate || report.createdAt,
+        conclusion: report.conclusion,
+        recommendation: report.recommendation,
+        roofModel: report.roofModel,
+        quantity: report.quantity,
+        area: report.area,
+        installationDate: report.installationDate,
+        technicalAnalysis: report.technicalAnalysis,
+        recommendations: report.recommendations,
+        evidences: report.evidences,
+      };
+
+      // Generate and download the Word document
+      await generateWordDocument(reportData);
       
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Erro ao gerar relatório');
-      }
-      
-      const data = await response.json();
-      console.log('Relatório gerado:', data);
-      
-      // Normalmente aqui faria o download do arquivo
-      // Em um app real, usaríamos algo como:
-      // window.open(data.downloadUrl, '_blank');
-      
-      // Por enquanto, apenas mostramos um alerta
       alert(`Relatório ${report.protocolNumber} gerado com sucesso!`);
     } catch (error) {
       console.error('Erro ao gerar relatório:', error);

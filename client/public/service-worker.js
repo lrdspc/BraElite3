@@ -4,13 +4,14 @@ const CACHE_NAME = 'brasilit-vistoria-v1-' + APP_VERSION;
 const OFFLINE_URL = '/offline.html';
 const DEBUG = false; // Definir como true para logs detalhados
 
-// Caches diferentes para diferentes tipos de conteúdo
+// Caches diferentes para diferentes tipos de conteúdo com estratégias específicas
 const CACHES = {
-  static: `${CACHE_NAME}-static`,  // Para arquivos estáticos que raramente mudam
-  pages: `${CACHE_NAME}-pages`,    // Para arquivos HTML
-  images: `${CACHE_NAME}-images`,  // Para imagens
-  fonts: `${CACHE_NAME}-fonts`,    // Para fontes
-  api: `${CACHE_NAME}-api`         // Para respostas da API
+  static: `${CACHE_NAME}-static`,  // Cache-first para arquivos estáticos
+  pages: `${CACHE_NAME}-pages`,    // Network-first para HTML
+  images: `${CACHE_NAME}-images`,  // Stale-while-revalidate para imagens
+  fonts: `${CACHE_NAME}-fonts`,    // Cache-first para fontes
+  api: `${CACHE_NAME}-api`,        // Network-first com fallback para API
+  dynamic: `${CACHE_NAME}-dynamic` // Cache dinâmico para outros recursos
 };
 
 // Assets estáticos que devem ser pré-cacheados durante a instalação
@@ -35,35 +36,76 @@ function log(...args) {
   }
 }
 
-// Função para limpar caches antigos
+// Função aprimorada para gerenciamento de cache
 async function clearOldCaches() {
-  const cacheKeys = await caches.keys();
-  const oldCacheKeys = cacheKeys.filter(key => 
-    key.startsWith('brasilit-vistoria-') && !Object.values(CACHES).includes(key)
-  );
-  
-  log('Limpando caches antigos:', oldCacheKeys);
-  return Promise.all(oldCacheKeys.map(key => caches.delete(key)));
+  try {
+    const cacheKeys = await caches.keys();
+    const oldCacheKeys = cacheKeys.filter(key => 
+      key.startsWith('brasilit-vistoria-') && !Object.values(CACHES).includes(key)
+    );
+    
+    log('Limpando caches antigos:', oldCacheKeys);
+    
+    // Limpar caches antigos
+    await Promise.all(oldCacheKeys.map(key => caches.delete(key)));
+    
+    // Verificar e limpar caches que excedem o limite de armazenamento
+    if ('storage' in navigator && 'estimate' in navigator.storage) {
+      const {usage, quota} = await navigator.storage.estimate();
+      const usageRatio = usage / quota;
+      
+      if (usageRatio > 0.7) { // Limpar se uso > 70%
+        log('Uso de armazenamento alto, limpando caches não essenciais...');
+        await clearNonEssentialCache();
+      }
+    }
+    
+    return true;
+  } catch (error) {
+    log('Erro ao limpar caches:', error);
+    return false;
+  }
 }
 
-// Função para detectar o tipo de conteúdo da requisição
+// Função para limpar cache não essencial
+async function clearNonEssentialCache() {
+  const nonEssentialCaches = [CACHES.images, CACHES.dynamic];
+  
+  for (const cacheName of nonEssentialCaches) {
+    const cache = await caches.open(cacheName);
+    const keys = await cache.keys();
+    
+    // Manter apenas os recursos mais recentes
+    const sortedKeys = keys.sort((a, b) => {
+      const aDate = a.headers.get('date');
+      const bDate = b.headers.get('date');
+      return new Date(bDate) - new Date(aDate);
+    });
+    
+    // Manter apenas os 100 recursos mais recentes
+    const keysToDelete = sortedKeys.slice(100);
+    await Promise.all(keysToDelete.map(key => cache.delete(key)));
+  }
+}
+
+// Função aprimorada para detectar o tipo de conteúdo e definir estratégia de cache
 function getCacheNameForRequest(request) {
   const url = new URL(request.url);
   
-  // Requisições de API
+  // Requisições de API com verificação de método
   if (url.pathname.startsWith('/api/')) {
-    return CACHES.api;
+    return request.method === 'GET' ? CACHES.api : null;
   }
   
-  // Requisições de imagens
+  // Requisições de imagens com suporte a WebP
   if (
     request.destination === 'image' || 
-    url.pathname.match(/\.(png|jpe?g|svg|gif|webp|bmp|ico)$/i)
+    url.pathname.match(/\.(png|jpe?g|svg|gif|webp|bmp|ico|avif)$/i)
   ) {
     return CACHES.images;
   }
   
-  // Requisições de fontes
+  // Requisições de fontes com prioridade de WOFF2
   if (
     request.destination === 'font' || 
     url.pathname.match(/\.(woff2?|ttf|otf|eot)$/i)
@@ -71,7 +113,7 @@ function getCacheNameForRequest(request) {
     return CACHES.fonts;
   }
   
-  // Requisições de HTML (páginas)
+  // Requisições de HTML (páginas) com verificação de modo
   if (
     request.destination === 'document' || 
     request.mode === 'navigate' ||
@@ -80,8 +122,13 @@ function getCacheNameForRequest(request) {
     return CACHES.pages;
   }
   
-  // Conteúdo estático (CSS, JS, etc.)
-  return CACHES.static;
+  // Recursos estáticos com verificação de extensão
+  if (url.pathname.match(/\.(css|js|json|xml)$/i)) {
+    return CACHES.static;
+  }
+  
+  // Cache dinâmico para outros recursos
+  return CACHES.dynamic;
 }
 
 // Função para mostrar indicador de sincronização
@@ -182,7 +229,7 @@ async function removeFromSyncQueueItem(id) {
   }
 }
 
-// Função para sincronizar dados com o servidor
+// Função aprimorada para sincronização de dados com retry e compressão adaptativa
 async function syncData() {
   log('Iniciando sincronização de dados...');
   showSyncIndicator();
@@ -194,10 +241,23 @@ async function syncData() {
       return;
     }
     
-    // Processar cada item da fila em ordem (mais antigos primeiro)
-    const sortedQueue = [...syncQueue].sort((a, b) => a.timestamp - b.timestamp);
+    // Verificar qualidade da conexão
+    const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    const isSlowConnection = connection?.effectiveType === '2g' || connection?.effectiveType === 'slow-2g';
+    
+    // Processar cada item da fila com priorização e compressão adaptativa
+    const sortedQueue = [...syncQueue].sort((a, b) => {
+      // Priorizar por tipo e timestamp
+      const typePriority = { urgent: 0, normal: 1, low: 2 };
+      const priorityDiff = typePriority[a.priority || 'normal'] - typePriority[b.priority || 'normal'];
+      return priorityDiff || a.timestamp - b.timestamp;
+    });
     
     for (const item of sortedQueue) {
+      // Aplicar compressão adaptativa baseada na conexão
+      if (isSlowConnection && item.data?.images) {
+        item.data.images = await compressImages(item.data.images, { quality: 0.6, maxWidth: 1024 });
+      }
       try {
         // Incrementar contador de tentativas
         const updatedAttempts = (item.attempts || 0) + 1;
