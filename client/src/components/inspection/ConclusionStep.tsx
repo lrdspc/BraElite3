@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
+import { generateDocumentText } from '@/lib/documentGenerator';
 import { CheckCircle, XCircle, FileText, Save, RefreshCw, LoaderCircle } from 'lucide-react';
 
 interface ConclusionStepProps {

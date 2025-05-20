@@ -78,17 +78,50 @@ const InspectionForm: React.FC<InspectionFormProps> = ({ inspectionId, initialDa
         return res.json();
       }
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       // Save to IndexedDB for offline access
       saveInspection(data);
       
       // Invalidate queries to refresh the data
       queryClient.invalidateQueries({ queryKey: ['/api/inspections'] });
       
-      toast({
-        title: isNewInspection ? 'Vistoria criada com sucesso' : 'Vistoria atualizada com sucesso',
-        description: `Protocolo: ${data.protocolNumber}`,
-      });
+      try {
+        // Chamar a API para gerar o documento Word
+        const response = await fetch('http://localhost:5000/api/document/generate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+        });
+
+        if (!response.ok) {
+          throw new Error('Erro ao gerar documento');
+        }
+
+        // Redirecionar para download do arquivo
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `relatorio_vistoria_${new Date().toISOString().split('T')[0]}.docx`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+
+        toast({
+          title: isNewInspection ? 'Vistoria criada com sucesso' : 'Vistoria atualizada com sucesso',
+          description: `Protocolo: ${data.protocolNumber}\nDocumento gerado com sucesso!`,
+        });
+      } catch (error) {
+        console.error('Erro ao gerar documento:', error);
+        toast({
+          title: 'Erro ao gerar documento',
+          description: 'O documento não pôde ser gerado. Tente novamente mais tarde.',
+          variant: 'destructive',
+        });
+      }
       
       // Navigate back to dashboard if completed, stay on page if draft
       if (data.status === 'completed' || data.status === 'in_review') {
