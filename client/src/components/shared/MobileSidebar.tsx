@@ -20,9 +20,9 @@ interface MobileSidebarProps {
   isOpen: boolean;
   onClose: () => void;
   user: {
-    name: string;
+    name?: string;
     role?: string;
-  };
+  } | null;
 }
 
 const MobileSidebar: React.FC<MobileSidebarProps> = ({ isOpen, onClose, user }) => {

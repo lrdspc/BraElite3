@@ -4,6 +4,7 @@ import { useLocation } from 'wouter';
 
 interface MobileHeaderProps {
   onMenuClick: () => void;
+  showInstallButton?: boolean;
 }
 
 const MobileHeader: React.FC<MobileHeaderProps> = ({ onMenuClick }) => {

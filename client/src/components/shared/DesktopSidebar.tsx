@@ -12,17 +12,24 @@ import {
   FileText, 
   Settings, 
   HelpCircle,
-  LogOut
+  LogOut,
+  User
 } from 'lucide-react';
 
 interface DesktopSidebarProps {
-  user: {
-    name: string;
+  user?: {
+    name?: string;
     role?: string;
-  };
+  } | null;
+  className?: string;
+  collapsed?: boolean;
 }
 
-const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ user }) => {
+const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ 
+  user, 
+  className,
+  collapsed = false 
+}) => {
   const [location] = useLocation();
   const { logout } = useAuth();
 
@@ -47,25 +54,39 @@ const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ user }) => {
     return acc;
   }, {} as Record<string, typeof navItems>);
 
+  const getUserInitials = (name?: string) => {
+    if (!name) return 'U';
+    return name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+  };
+
   return (
-    <aside className="hidden md:flex md:flex-col md:w-64 bg-white border-r border-neutral-light h-screen fixed left-0 top-0">
-      <div className="p-4 border-b border-neutral-light flex items-center">
-        <svg width="140" height="40" viewBox="0 0 140 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M23.3333 0H46.6667C60.48 0 70 9.52 70 23.3333C70 37.1467 60.48 46.6667 46.6667 46.6667H23.3333C9.52 46.6667 0 37.1467 0 23.3333C0 9.52 9.52 0 23.3333 0Z" fill="hsl(var(--primary))"/>
-          <path d="M93.3333 0H116.667C130.48 0 140 9.52 140 23.3333C140 37.1467 130.48 46.6667 116.667 46.6667H93.3333C79.52 46.6667 70 37.1467 70 23.3333C70 9.52 79.52 0 93.3333 0Z" fill="hsl(var(--primary))"/>
-          <text x="17.5" y="29.1667" fontFamily="Arial" fontSize="18.6667" fontWeight="700" fill="white">BRASI</text>
-          <text x="87.5" y="29.1667" fontFamily="Arial" fontSize="18.6667" fontWeight="700" fill="white">LIT</text>
-        </svg>
+    <aside className={cn(
+      "flex flex-col bg-card border-r border-border h-screen fixed left-0 top-0",
+      collapsed ? "w-16" : "w-64",
+      className
+    )}>
+      <div className="p-4 border-b border-border flex items-center">
+        {/* Logo */}
+        <img 
+          src="/brasilit-icon-192.svg" 
+          alt="Brasilit" 
+          className={cn(
+            "transition-all duration-200",
+            collapsed ? "w-8 h-8" : "w-32 h-8"
+          )} 
+        />
       </div>
       
       <div className="p-2 overflow-y-auto flex-1">
         {Object.entries(groupedNavItems).map(([category, items]) => (
           <div key={category}>
-            <div className="px-2 pt-4 pb-2 mb-1">
-              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                {category}
-              </span>
-            </div>
+            {!collapsed && (
+              <div className="px-2 pt-4 pb-2 mb-1">
+                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  {category}
+                </span>
+              </div>
+            )}
             
             {items.map((item) => {
               const isActive = location === item.href || 
@@ -83,11 +104,16 @@ const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ user }) => {
                         ? "bg-primary/10 text-primary" 
                         : "text-muted-foreground hover:bg-accent"
                     )}
+                    title={collapsed ? item.label : undefined}
                   >
-                    <span className="mr-3">{item.icon}</span>
-                    <span className={isActive ? "font-medium" : ""}>
-                      {item.label}
+                    <span className={cn("flex-shrink-0", collapsed ? "" : "mr-3")}>
+                      {item.icon}
                     </span>
+                    {!collapsed && (
+                      <span className={isActive ? "font-medium" : ""}>
+                        {item.label}
+                      </span>
+                    )}
                   </a>
                 </Link>
               );
@@ -96,22 +122,35 @@ const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ user }) => {
         ))}
       </div>
       
-      <div className="mt-auto border-t border-neutral-light p-4">
+      <div className="mt-auto border-t border-border p-4">
         <div className="flex items-center">
-          <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center mr-3">
-            <span className="text-lg font-medium">
-              {user.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()}
-            </span>
+          <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center mr-3">
+            {user?.name ? (
+              <span className="text-lg font-medium">
+                {getUserInitials(user.name)}
+              </span>
+            ) : (
+              <User size={20} />
+            )}
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate">{user.name}</p>
-            <p className="text-xs text-muted-foreground truncate">
-              {user.role === 'admin' ? 'Administrador' : 'Técnico Vistoriador'}
-            </p>
-          </div>
+          {!collapsed && (
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate">
+                {user?.name || 'Usuário'}
+              </p>
+              {user?.role && (
+                <p className="text-xs text-muted-foreground truncate">
+                  {user.role === 'admin' ? 'Administrador' : 'Técnico Vistoriador'}
+                </p>
+              )}
+            </div>
+          )}
           <button 
             onClick={() => logout()}
-            className="ml-2 text-muted-foreground hover:text-foreground"
+            className={cn(
+              "text-muted-foreground hover:text-foreground",
+              !collapsed && "ml-2"
+            )}
             title="Sair"
           >
             <LogOut size={18} />

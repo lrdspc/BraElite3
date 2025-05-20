@@ -1,62 +1,58 @@
-import React, { useState, useEffect } from 'react';
-import { Button } from '../ui/button';
+import React from 'react';
+import { usePwaInstall } from '@/hooks/use-pwa-install';
+import { cn } from '@/lib/utils';
 import { Download } from 'lucide-react';
-import { isInstallPromptAvailable, promptInstall } from '../../lib/pwa';
 
 interface InstallPwaButtonProps {
+  variant?: 'default' | 'outline' | 'secondary' | 'ghost';
+  size?: 'sm' | 'md' | 'lg';
   className?: string;
-  variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link" | null | undefined;
-  size?: "default" | "sm" | "lg" | "icon" | null | undefined;
 }
 
-export function InstallPwaButton({
-  className,
-  variant = "default",
-  size = "default"
-}: InstallPwaButtonProps) {
-  const [canInstall, setCanInstall] = useState(false);
+const InstallPwaButton: React.FC<InstallPwaButtonProps> = ({
+  variant = 'default',
+  size = 'md',
+  className
+}) => {
+  const { isAvailable, isInstalling, install } = usePwaInstall();
 
-  useEffect(() => {
-    // Verificar inicialmente se a instalação é possível
-    setCanInstall(isInstallPromptAvailable());
+  if (!isAvailable) {
+    return null;
+  }
 
-    // Ouvir evento beforeinstallprompt
-    const handleBeforeInstallPrompt = () => {
-      setCanInstall(true);
-    };
-
-    // Ouvir evento appinstalled
-    const handleAppInstalled = () => {
-      setCanInstall(false);
-    };
-
-    window.addEventListener('beforeinstallprompt-available', handleBeforeInstallPrompt);
-    window.addEventListener('appinstalled', handleAppInstalled);
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt-available', handleBeforeInstallPrompt);
-      window.removeEventListener('appinstalled', handleAppInstalled);
-    };
-  }, []);
-
-  const handleInstallClick = async () => {
-    const success = await promptInstall();
-    if (success) {
-      setCanInstall(false);
-    }
+  const baseStyles = "inline-flex items-center justify-center rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none";
+  
+  const variantStyles = {
+    default: "bg-primary text-primary-foreground hover:bg-primary/90",
+    outline: "border border-input hover:bg-accent hover:text-accent-foreground",
+    secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+    ghost: "hover:bg-accent hover:text-accent-foreground"
   };
 
-  if (!canInstall) return null;
+  const sizeStyles = {
+    sm: "h-9 px-3 text-sm",
+    md: "h-10 px-4",
+    lg: "h-11 px-8"
+  };
 
   return (
-    <Button 
-      className={className} 
-      variant={variant} 
-      size={size} 
-      onClick={handleInstallClick}
+    <button
+      onClick={install}
+      disabled={isInstalling}
+      className={cn(
+        baseStyles,
+        variantStyles[variant],
+        sizeStyles[size],
+        "gap-2",
+        className
+      )}
     >
-      <Download className="mr-2 h-4 w-4" />
-      Instalar App
-    </Button>
+      <Download size={size === 'sm' ? 16 : 20} />
+      <span>
+        {isInstalling ? 'Instalando...' : 'Instalar App'}
+      </span>
+    </button>
   );
-}
+};
+
+export default InstallPwaButton;
