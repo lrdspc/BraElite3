@@ -2,17 +2,12 @@
 const APP_VERSION = '1.0.0';
 const CACHE_NAME = 'brasilit-vistoria-v1-' + APP_VERSION;
 const OFFLINE_URL = '/offline.html';
-const DEBUG = false; // Definir como true para logs detalhados
-
+const DEBUG = false;
 // Caches diferentes para diferentes tipos de conteúdo com estratégias específicas
 const CACHES = {
-  static: `${CACHE_NAME}-static`,  // Cache-first para arquivos estáticos
-  pages: `${CACHE_NAME}-pages`,    // Network-first para HTML
-  images: `${CACHE_NAME}-images`,  // Stale-while-revalidate para imagens
-  fonts: `${CACHE_NAME}-fonts`,    // Cache-first para fontes
-  api: `${CACHE_NAME}-api`,        // Network-first com fallback para API
-  dynamic: `${CACHE_NAME}-dynamic` // Cache dinâmico para outros recursos
-};
+  static: `${CACHE_NAME}-static`,  pages: `${CACHE_NAME}-pages`,  images: `${CACHE_NAME}-images`,  fonts: `${CACHE_NAME}-fonts`,  api: `${CACHE_NAME}-api`,  dynamic: `${CACHE_NAME}-dynamic`};
+
+const IDB_SCRIPT_URL = 'https://cdn.jsdelivr.net/npm/idb@7/build/iife/index-min.js';
 
 // Assets estáticos que devem ser pré-cacheados durante a instalação
 const STATIC_ASSETS = [
@@ -22,11 +17,13 @@ const STATIC_ASSETS = [
   '/manifest.json',
   '/brasilit-icon-192.svg',
   '/brasilit-icon-512.svg',
-  '/brasilit-icon-192-maskable.svg',
-  '/brasilit-icon-512-maskable.svg',
-  '/shortcut-dashboard.svg',
-  '/shortcut-inspection.svg',
-  '/shortcut-list.svg'
+  '/brasilit-icon-192-maskable.svg', // Added maskable icon
+  '/brasilit-icon-512-maskable.svg', // Added maskable icon
+  '/shortcut-dashboard.svg', // Added shortcut icon
+  '/shortcut-inspection.svg', // Added shortcut icon
+  '/shortcut-list.svg', // Added shortcut icon
+  // Screenshot files are not typically pre-cached as they are for store listings
+  IDB_SCRIPT_URL // Cache the idb script
 ];
 
 // Função helper para logs condicionais
@@ -233,83 +230,99 @@ async function removeFromSyncQueueItem(id) {
 async function syncData() {
   log('Iniciando sincronização de dados...');
   showSyncIndicator();
-  
+
   try {
     const syncQueue = await getSyncQueue();
     if (syncQueue.length === 0) {
       log('Nenhum dado para sincronizar');
       return;
     }
-    
-    // Verificar qualidade da conexão
+
     const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
     const isSlowConnection = connection?.effectiveType === '2g' || connection?.effectiveType === 'slow-2g';
-    
-    // Processar cada item da fila com priorização e compressão adaptativa
+
     const sortedQueue = [...syncQueue].sort((a, b) => {
-      // Priorizar por tipo e timestamp
       const typePriority = { urgent: 0, normal: 1, low: 2 };
       const priorityDiff = typePriority[a.priority || 'normal'] - typePriority[b.priority || 'normal'];
       return priorityDiff || a.timestamp - b.timestamp;
     });
-    
+
     for (const item of sortedQueue) {
-      // Aplicar compressão adaptativa baseada na conexão
       if (isSlowConnection && item.data?.images) {
-        item.data.images = await compressImages(item.data.images, { quality: 0.6, maxWidth: 1024 });
+        // A função compressImages não está definida neste escopo, precisaria ser importada ou definida.
+        // Por ora, vou comentar para evitar erros, mas idealmente ela deveria existir.
+        // item.data.images = await compressImages(item.data.images, { quality: 0.6, maxWidth: 1024 });
+        log('Compressão de imagens pulada pois a função compressImages não está disponível no escopo do service worker.');
       }
+
+      const maxRetries = 5;
+      const initialBackoff = 1000; // 1 segundo
+
+      let attempts = item.attempts || 0;
+      if (attempts >= maxRetries) {
+        log(`Número máximo de tentativas atingido para o item: ${item.id}, removendo da fila`);
+        await removeFromSyncQueueItem(item.id);
+        continue;
+      }
+
       try {
-        // Incrementar contador de tentativas
-        const updatedAttempts = (item.attempts || 0) + 1;
-        await updateSyncQueueItem(item.id, { attempts: updatedAttempts });
-        
+        // Incrementar contador de tentativas ANTES da tentativa
+        attempts++;
+        await updateSyncQueueItem(item.id, { attempts: attempts, lastAttemptTimestamp: Date.now() });
+
         const response = await fetch(item.url, {
           method: item.method,
           headers: {
             'Content-Type': 'application/json',
-            // Incluir headers de autenticação se necessário
+            ...(item.headers || {}), // Incluir headers armazenados
           },
           body: item.body ? JSON.stringify(item.body) : undefined,
           credentials: 'include'
         });
-        
+
         if (response.ok) {
-          // Remove item da fila se foi sincronizado com sucesso
           await removeFromSyncQueueItem(item.id);
           log(`Item sincronizado com sucesso: ${item.url}, ID: ${item.id}`);
         } else {
-          log(`Falha na sincronização: ${response.status} ${response.statusText} para item ID: ${item.id}`);
-          
-          // Se atingiu o número máximo de tentativas, remover da fila
-          if (updatedAttempts >= 5) {
+          log(`Falha na sincronização: ${response.status} ${response.statusText} para item ID: ${item.id}, tentativa ${attempts}`);
+          if (attempts >= maxRetries) {
             await removeFromSyncQueueItem(item.id);
-            log(`Número máximo de tentativas atingido para o item: ${item.id}, removendo da fila`);
+            log(`Removido após ${maxRetries} tentativas: ${item.id}`);
           }
+          // Não precisa de 'else' aqui, o item permanece na fila para a próxima tentativa de syncData
+          // ou para a próxima execução do backoff se implementado diretamente no loop.
         }
       } catch (itemError) {
-        log(`Erro ao sincronizar item ${item.url} (ID: ${item.id}):`, itemError);
-        // O contador de tentativas já foi incrementado acima
+        log(`Erro de rede ao sincronizar item ${item.url} (ID: ${item.id}, tentativa ${attempts}):`, itemError);
+        if (attempts >= maxRetries) {
+          await removeFromSyncQueueItem(item.id);
+          log(`Removido após ${maxRetries} tentativas devido a erro de rede: ${item.id}`);
+        }
+        // O item permanece na fila para a próxima tentativa de syncData
       }
     }
-    
     log('Sincronização concluída');
   } catch (error) {
-    log('Erro de sincronização:', error);
+    log('Erro geral na função syncData:', error);
   } finally {
     hideSyncIndicator();
   }
 }
 
-// Função para notificar o usuário sobre atualizações no aplicativo
-async function notifyAppUpdate() {
-  const clients = await self.clients.matchAll({ type: 'window' });
-  clients.forEach(client => {
-    client.postMessage({
-      type: 'APP_UPDATE',
-      payload: { version: APP_VERSION }
-    });
-  });
+// Função de utilidade para atraso (delay)
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
+
+// Modificando o loop de sincronização para incluir backoff exponencial dentro do processamento de cada item.
+// Esta é uma abordagem alternativa à modificação direta de syncData,
+// focando em como o 'sync' event listener lida com as tentativas.
+// Para manter a simplicidade da modificação atual, o backoff será gerenciado
+// pelo intervalo entre chamadas de 'syncData' (pelo 'periodicsync' ou 'sync' events)
+// e o contador de tentativas. A lógica de backoff *dentro* do loop de `syncData`
+// para cada item individualmente pode tornar o processo de sincronização muito longo
+// se houver muitos itens na fila. A estratégia atual tenta todos os itens pendentes
+// e se alguns falharem, eles serão retentados na próxima vez que `syncData` for chamado.
 
 // Evento de instalação - pré-cachear ativos estáticos
 self.addEventListener('install', (event) => {
@@ -348,45 +361,6 @@ async function addToSyncQueue(item) {
   await tx.done;
 }
 
-// Modificar fetch para enfileirar requisições POST/PUT/DELETE offline
-self.addEventListener('fetch', (event) => {
-  const request = event.request;
-  
-  if (!request.url.startsWith(self.location.origin)) {
-    return;
-  }
-  
-  if (request.method !== 'GET') {
-    if (!navigator.onLine) {
-      event.respondWith(
-        (async () => {
-          const clonedRequest = request.clone();
-          const body = await clonedRequest.json().catch(() => null);
-          await addToSyncQueue({
-            url: clonedRequest.url,
-            method: clonedRequest.method,
-            body,
-            timestamp: Date.now(),
-            attempts: 0
-          });
-          return new Response(
-            JSON.stringify({
-              success: true,
-              offline: true,
-              message: 'Request queued for sync when online'
-            }),
-            {
-              status: 202,
-              headers: { 'Content-Type': 'application/json' }
-            }
-          );
-        })()
-      );
-    }
-    return;
-  }
-});
-
 // Evento de ativação - limpar caches antigos
 self.addEventListener('activate', (event) => {
   log('Ativando Service Worker versão:', APP_VERSION);
@@ -408,37 +382,94 @@ self.addEventListener('activate', (event) => {
 // Evento de fetch principal - gerenciar recursos em cache ou buscar na rede
 self.addEventListener('fetch', (event) => {
   const request = event.request;
-  
-  // Ignorar requisições de outros domínios
-  if (!request.url.startsWith(self.location.origin)) {
-    return;
-  }
-  
-  // Gerenciar requisições não GET (POST/PUT/DELETE) durante offline
-  if (request.method !== 'GET') {
-    // Já tratamos requisições não-GET no primeiro listener de fetch
-    return;
-  }
-  
-  // Determinar qual cache usar
   const cacheName = getCacheNameForRequest(request);
-  
-  // Diferentes estratégias para diferentes tipos de conteúdo
-  if (request.url.includes('/api/')) {
-    // ESTRATÉGIA PARA API: Network first, fallback to cache, update cache when online
-    event.respondWith(apiStrategy(request, cacheName));
-  }
-  else if (request.mode === 'navigate') {
-    // ESTRATÉGIA PARA NAVEGAÇÃO: Network first com fallback para offline page
-    event.respondWith(navigationStrategy(request));
-  }
-  else if (cacheName === CACHES.images || cacheName === CACHES.fonts) {
-    // ESTRATÉGIA PARA IMAGENS e FONTES: Cache first, network fallback
-    event.respondWith(cacheFirstStrategy(request, cacheName));
-  }
-  else {
-    // ESTRATÉGIA PADRÃO: Stale-while-revalidate
-    event.respondWith(staleWhileRevalidateStrategy(request, cacheName));
+
+  log(`[SW] Fetching: ${request.url}`);
+
+  if (request.method === 'GET') {
+    if (request.mode === 'navigate') {
+      event.respondWith(navigationStrategy(request));
+    } else if (cacheName === CACHES.api) {
+      event.respondWith(apiStrategy(request, cacheName));
+    } else if (cacheName === CACHES.fonts) { // Adicionando estratégia para fontes
+      event.respondWith(staleWhileRevalidateStrategy(request, cacheName));
+    } else if (cacheName) {
+      // Para outros caches (static, images, dynamic), usar CacheFirst com fallback para network.
+      // A implementação original já faz algo similar a CacheFirst.
+      event.respondWith(
+        caches.open(cacheName).then((cache) => {
+          return cache.match(request).then((response) => {
+            if (response) {
+              log(`[SW] Cache hit for: ${request.url}`);
+              return response;
+            }
+            log(`[SW] Cache miss for: ${request.url}, fetching from network.`);
+            return fetch(request).then((networkResponse) => {
+              if (networkResponse.ok) {
+                cache.put(request, networkResponse.clone());
+              }
+              return networkResponse;
+            }).catch(err => {
+              log(`[SW] Network fetch failed for ${request.url}:`, err);
+              // Para imagens, poderia retornar um placeholder como na cacheFirstStrategy
+              if (request.destination === 'image') {
+                const svgPlaceholder = `
+                  <svg width="400" height="300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Imagem indisponível">
+                    <rect width="400" height="300" fill="#EEE" />
+                    <text x="200" y="150" font-size="20" text-anchor="middle" fill="#AAA" dy=".3em">Imagem indisponível</text>
+                  </svg>
+                `;
+                return new Response(svgPlaceholder, { headers: { 'Content-Type': 'image/svg+xml' } });
+              }
+              // Para outros, re-throw ou retornar uma resposta de erro genérica
+              throw err;
+            });
+          });
+        })
+      );
+    } else {
+      // Fallback for GET requests not matching any specific strategy
+      event.respondWith(fetch(request));
+    }
+  } else if (['POST', 'PUT', 'DELETE'].includes(request.method)) {
+    // For non-GET requests, try network first. If offline, queue it.
+    event.respondWith(
+      fetch(request.clone()).catch(async () => {
+        log(`[SW] Network request failed for ${request.method} ${request.url}. Queuing.`);
+        // Ensure request.clone() is used if the body needs to be read multiple times
+        // However, for queuing, we might need to read the body once to store it.
+        const clonedRequest = request.clone();
+        let body = null;
+        try {
+          // Attempt to read body as JSON, fallback to text, then null
+          const contentType = clonedRequest.headers.get('Content-Type');
+          if (contentType && contentType.includes('application/json')) {
+            body = await clonedRequest.json();
+          } else {
+            body = await clonedRequest.text();
+          }
+        } catch (e) {
+          log('[SW] Could not parse body for queuing:', e);
+        }
+        
+        await addToSyncQueue({
+          url: clonedRequest.url,
+          method: clonedRequest.method,
+          body: body,
+          headers: Object.fromEntries(clonedRequest.headers.entries()),
+          timestamp: Date.now(),
+          attempts: 0
+        });
+        // Return a synthetic response indicating the request is queued
+        return new Response(JSON.stringify({ message: 'Request queued for background sync' }), {
+          status: 202, // Accepted
+          headers: { 'Content-Type': 'application/json' }
+        });
+      })
+    );
+  } else {
+    // For other methods, just fetch
+    event.respondWith(fetch(request));
   }
 });
 

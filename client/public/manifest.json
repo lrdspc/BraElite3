@@ -16,42 +16,6 @@
   },
   "icons": [
     {
-      "src": "icons/icon-16.png",
-      "sizes": "16x16",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "icons/icon-32.png",
-      "sizes": "32x32",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "icons/icon-48.png",
-      "sizes": "48x48",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "icons/icon-64.png",
-      "sizes": "64x64",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "icons/icon-128.png",
-      "sizes": "128x128",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "icons/icon-256.png",
-      "sizes": "256x256",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
       "src": "brasilit-icon-192.svg",
       "sizes": "192x192",
       "type": "image/svg+xml",
@@ -76,40 +40,27 @@
       "purpose": "maskable"
     }
   ],
-  "screenshots": [
-    {
-      "src": "screenshot-narrow.jpg",
-      "sizes": "540x1200",
-      "type": "image/jpeg",
-      "form_factor": "narrow"
-    },
-    {
-      "src": "screenshot-wide.jpg",
-      "sizes": "1200x800",
-      "type": "image/jpeg",
-      "form_factor": "wide"
-    }
-  ],  "shortcuts": [
+  "shortcuts": [
     {
       "name": "Nova Vistoria",
-      "short_name": "Nova Vistoria",
+      "short_name": "Nova",
       "description": "Iniciar uma nova vistoria técnica",
       "url": "/inspection/new?source=shortcut",
-      "icons": [{ "src": "/shortcut-inspection.svg", "sizes": "192x192", "type": "image/svg+xml" }]
+      "icons": [{ "src": "/shortcut-inspection.svg", "sizes": "96x96", "type": "image/svg+xml" }]
     },
     {
-      "name": "Minhas Vistorias",
-      "short_name": "Vistorias",
-      "description": "Ver minhas vistorias em andamento e finalizadas",
+      "name": "Listar Vistorias",
+      "short_name": "Listar",
+      "description": "Ver todas as vistorias",
       "url": "/inspections?source=shortcut",
-      "icons": [{ "src": "/shortcut-list.svg", "sizes": "192x192", "type": "image/svg+xml" }]
+      "icons": [{ "src": "/shortcut-list.svg", "sizes": "96x96", "type": "image/svg+xml" }]
     },
     {
-      "name": "Dashboard",
-      "short_name": "Dashboard",
-      "description": "Visualizar dashboard de vistorias",
+      "name": "Painel Principal",
+      "short_name": "Painel",
+      "description": "Acessar o painel principal",
       "url": "/?source=shortcut",
-      "icons": [{ "src": "/shortcut-dashboard.svg", "sizes": "192x192", "type": "image/svg+xml" }]
+      "icons": [{ "src": "/shortcut-dashboard.svg", "sizes": "96x96", "type": "image/svg+xml" }]
     }
   ],
   "lang": "pt-BR",
@@ -123,29 +74,31 @@
   "protocol_handlers": [
     {
       "protocol": "web+brasilit",
-      "url": "/?source=protocol&url=%s"
+      "url": "/protocol-handler?url=%s"
     }
   ],
   "file_handlers": [
     {
-      "action": "/open-inspection",
+      "action": "/file-handler",
       "accept": {
-        "application/brasilit-inspection": [".brinsp"]
-      }
+        "application/vnd.brasilit.inspection": [".brinsp"],
+        "image/*": [".png", ".jpg", ".jpeg", ".gif", ".webp"],
+        "application/pdf": [".pdf"]
+      },
+      "launch_type": "multiple-clients"
     }
   ],
   "widgets": [
     {
-      "name": "brasilit-dashboard",
-      "description": "Mostra estatísticas de vistorias técnicas",
-      "tag": "dashboard",
-      "template": "widgets/dashboard.html",
-      "data": "/api/widget-data",
-      "type": "application/json",
-      "update": {
-        "frequency": "periodic",
-        "period": 900
-      }
+      "name": "Painel de Vistorias Brasilit",
+      "short_name": "Vistorias Brasilit",
+      "description": "Acompanhe suas vistorias e atividades recentes.",
+      "tag": "brasilitDashboardWidget",
+      "template": "brasilit_dashboard_widget",
+      "ms_ac_template": "widgets/dashboard.html",
+      "data_url": "/api/widgets/dashboard-data",
+      "auth": true,
+      "update_period": 3600000
     }
   ],
   "share_target": {
@@ -158,14 +111,40 @@
       "url": "url",
       "files": [
         {
-          "name": "photos",
-          "accept": ["image/*"]
-        },
-        {
-          "name": "documents",
-          "accept": ["application/pdf", ".pdf"]
+          "name": "shared_files",
+          "accept": ["image/*", "application/pdf", ".brinsp", "text/*", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"]
         }
       ]
     }
-  }
+  },
+  "screenshots": [
+    {
+      "src": "screenshots/screenshot-desktop-1.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "platform": "wide",
+      "label": "Tela principal do dashboard no desktop."
+    },
+    {
+      "src": "screenshots/screenshot-mobile-1.png",
+      "sizes": "720x1280",
+      "type": "image/png",
+      "platform": "narrow",
+      "label": "Visualização de vistorias em um dispositivo móvel."
+    },
+    {
+      "src": "screenshots/screenshot-desktop-2.png",
+      "sizes": "1920x1080",
+      "type": "image/png",
+      "platform": "wide",
+      "label": "Formulário de inspeção detalhado."
+    },
+    {
+      "src": "screenshots/screenshot-mobile-2.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "platform": "narrow",
+      "label": "Menu de navegação mobile e acesso rápido."
+    }
+  ]
 }

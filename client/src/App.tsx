@@ -1,9 +1,8 @@
-import { Switch, Route, useLocation } from "wouter";
+import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "./context/AuthContext";
-import { useEffect } from "react";
 
 // Layouts
 import AuthLayout from "./components/layouts/AuthLayout";
@@ -28,10 +27,6 @@ import ShareTargetPage from "./pages/share-target"; // Importando a nova página
 import { ServiceWorkerManager } from "./components/shared/ServiceWorkerManager";
 
 function Router() {
-  const [location] = useLocation();
-  
-  // O Service Worker agora é registrado no main.tsx
-
   return (
     <Switch>      {/* Public routes */}
       <Route path="/login">

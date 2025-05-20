@@ -8,6 +8,13 @@
         "BROWSERBASE_PROJECT_ID": "<YOUR_BROWSERBASE_PROJECT_ID>",
         "OPENAI_API_KEY": "<YOUR_OPENAI_API_KEY>"
       }
+    },
+    "memory": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-memory"
+      ]
     }
   }
 }
