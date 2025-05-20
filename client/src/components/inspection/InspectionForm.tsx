@@ -86,22 +86,9 @@ const InspectionForm: React.FC<InspectionFormProps> = ({ inspectionId, initialDa
       queryClient.invalidateQueries({ queryKey: ['/api/inspections'] });
       
       try {
-        // Chamar a API para gerar o documento Word
-        const response = await fetch('http://localhost:5000/api/document/generate', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(data),
-        });
-
-        if (!response.ok) {
-          throw new Error('Erro ao gerar documento');
-        }
-
-        // Redirecionar para download do arquivo
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
+        // Gerar o documento Word localmente usando docGenerator
+        const wordDoc = await generateWordDocument(data);
+        const url = window.URL.createObjectURL(wordDoc);
         const a = document.createElement('a');
         a.href = url;
         a.download = `relatorio_vistoria_${new Date().toISOString().split('T')[0]}.docx`;
